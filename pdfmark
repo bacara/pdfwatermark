@@ -23,11 +23,13 @@
 
 # options array
 declare -A opts
-opts[outfile]=""     # output file
-opts[infile]=""      # input file
 opts[wmfile]=""      # watermark file
 opts[workdir]=""     # working directory
 opts[preserve]=false # preserve intermediate files
+
+# input/output files arrays
+infiles=()
+outfiles=()
 
 # misc
 BASENAME="$(basename $0)"
@@ -50,7 +52,7 @@ function error () {
 }
 
 function help () {
-    echo "Usage: ${BASENAME} [OPTION]... <WATERMARK> <FILE>"
+    echo "Usage: ${BASENAME} [OPTION]... <WATERMARK> <FILE>..."
     echo "Watermark your PDF documents"
     echo ""
     #    |< ------------------------ 80-characters string in here ----------------------->|
@@ -58,16 +60,14 @@ function help () {
     echo "  -d, --directory DIR       set DIR instead of mktemp generation as working"
     echo "                              directory"
     echo "  -k, --keep-files          keep intermediate files instead of deleting them"
-    echo "  -o, --outfile FILE        use FILE as output filename"
-    echo ""
-    echo "  --help               Display this help and exit"
+    echo "  --help                    display this help and exit"
     #    |< ------------------------ 80-characters string in here ----------------------->|
     echo ""
     echo "Full documentation <https://www.github.com/bacara/pdfmark>"
 }
 
 function usage () {
-    echo "Usage: ${BASENAME} [OPTION]... <WATERMARK> <FILE>"
+    echo "Usage: ${BASENAME} [OPTION]... <WATERMARK> <FILE>..."
     echo "Use --help to display more help"
 }
 
@@ -77,10 +77,12 @@ function usage () {
 
 function pdfwatermark () {
     # $1: watermark filename
-    # $2: document filename
+    # $2: input filename
+    # $3: output filename
 
     WM_FN="$1"
     DOC_FN="$2"
+    OUT_FN="$3"
 
     TMP="$(mktemp -u XXXXX)"
     FN_NE="${DOC_FN%.*}"  # remove extension from filename
@@ -95,7 +97,7 @@ function pdfwatermark () {
 
     convert ${FILEPATH_NE}*-watermarked.png ${FILEPATH_NE}-watermarked.pdf
 
-    cp ${FILEPATH_NE}-watermarked.pdf ${opts[outfile]}
+    cp ${FILEPATH_NE}-watermarked.pdf ${OUT_FN}
 
     if ! ${opts[preserve]}; then
         rm ${FILEPATH_NE}*
@@ -110,12 +112,6 @@ __PARAMS=""
 
 while (( "$#" )); do
     case "$1" in
-        # output file
-        -o|--outfile)
-            opts[outfile]="$2"
-            shift 2
-            ;;
-
         # working directory
         -d|--directory)
             # check existence
@@ -171,31 +167,32 @@ else
     shift
 fi
 
-# check if input file exists
-if [[ ! -f "$1" ]]; then
-    fatal_error "no such file: $1"
-else
-    opts[infile]="$1"
+# retrieve input files
+while (( $# )); do
+    if [[ ! -f "$1" ]]; then
+        fatal_error "no such file: $1"
+    else
+        infiles+=("$1")
+    fi
+
+    # build output filename
+    base="$(basename $1)"
+    outfiles+=("${base%.*}-watermarked.${1##*.}")
+
+    # check if output file exists
+    if [[ -f "${outfiles[-1]}" ]]; then
+        read -n 1 -p "${outfiles[-1]} already exists, overwrite? [y/N] " answer
+        echo # acknowledge answer
+        case $answer in
+            [Yy]) ;;
+            *)
+                exit 1
+                ;;
+        esac
+    fi
+
     shift
-fi
-
-# build output filename if needed
-if [[ -z "${opts[outfile]}" ]]; then
-    base="$(basename ${opts[infile]})"
-    opts[outfile]="${base%.*}-watermarked.${opts[infile]##*.}"
-fi
-
-# check if output file exists
-if [[ -f "${opts[outfile]}" ]]; then
-    read -n 1 -p "output file already exists, overwrite? [y/N] " answer
-    echo # acknowledge answer
-    case $answer in
-        [Yy]) ;;
-        *)
-            exit 1
-            ;;
-    esac
-fi
+done
 
 # create temp directory if no working directory provided
 if [[ -z "${opts[workdir]}" ]]; then
@@ -206,4 +203,6 @@ fi
 [[ "${opts[workdir]}" != */ ]] && opts[workdir]="${opts[workdir]}/"
 
 # do your job
-pdfwatermark ${opts[wmfile]} ${opts[infile]}
+for i in ${!infiles[*]}; do
+    pdfwatermark "${opts[wmfile]}" "${infiles[$i]}" "${outfiles[$i]}"
+done
