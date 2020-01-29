@@ -26,6 +26,7 @@ declare -A opts
 opts[wmfile]=""      # watermark file
 opts[workdir]=""     # working directory
 opts[preserve]=false # preserve intermediate files
+opts[force]=false    # force overwrite
 
 # input/output files arrays
 infiles=()
@@ -59,6 +60,7 @@ function help () {
     echo "Mandatory arguments to long options are mandatory for short options too."
     echo "  -d, --directory DIR       set DIR instead of mktemp generation as working"
     echo "                              directory"
+    echo "  -f, --force               do not ask for overwrite confirmation"
     echo "  -k, --keep-files          keep intermediate files instead of deleting them"
     echo "  --help                    display this help and exit"
     #    |< ------------------------ 80-characters string in here ----------------------->|
@@ -122,6 +124,12 @@ while (( "$#" )); do
             shift 2
             ;;
 
+        # force overwrite
+        -f|--force)
+            opts[force]=true
+            shift
+            ;;
+
         # preserve intermediary files
         --keep-files)
             opts[preserve]=true
@@ -172,16 +180,16 @@ while (( $# )); do
     if [[ ! -f "$1" ]]; then
         fatal_error "no such file: $1"
     else
-        infiles+=("$1")
+        infile="$1"
     fi
 
     # build output filename
     base="$(basename $1)"
-    outfiles+=("${base%.*}-watermarked.${1##*.}")
+    outfile="${base%.*}-watermarked.${1##*.}"
 
     # check if output file exists
-    if [[ -f "${outfiles[-1]}" ]]; then
-        read -n 1 -p "${outfiles[-1]} already exists, overwrite? [y/N] " answer
+    if ! ${opts[force]} && [[ -f "${outfile}" ]]; then
+        read -n 1 -p "${outfile} already exists, overwrite? [y/N] " answer
         echo # acknowledge answer
         case $answer in
             [Yy]) ;;
@@ -191,6 +199,8 @@ while (( $# )); do
         esac
     fi
 
+    infiles+=("$infile")
+    outfiles+=("$outfile")
     shift
 done
 
