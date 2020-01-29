@@ -27,6 +27,7 @@ opts[wmfile]=""      # watermark file
 opts[workdir]=""     # working directory
 opts[preserve]=false # preserve intermediate files
 opts[force]=false    # force overwrite
+opts[wm.opacity]=30  # default watermark opacity
 
 # input/output files arrays
 infiles=()
@@ -62,6 +63,7 @@ function help () {
     echo "                              directory (implies --keep-files)"
     echo "  -f, --force               do not ask for overwrite confirmation"
     echo "  -k, --keep-files          keep intermediate files instead of deleting them"
+    echo "      --opacity N           set watermark inclusion opacity to N (0-100)"
     echo "  --help                    display this help and exit"
     #    |< ------------------------ 80-characters string in here ----------------------->|
     echo ""
@@ -94,7 +96,7 @@ function pdfwatermark () {
 
     for page in ${FILEPATH_NE}*.png
     do
-        composite -watermark 30 -gravity center ${WM_FN} ${page} ${page%.*}-watermarked.png
+        composite -watermark ${opts[wm.opacity]} -gravity center ${WM_FN} ${page} ${page%.*}-watermarked.png
     done
 
     convert ${FILEPATH_NE}*-watermarked.png ${FILEPATH_NE}-watermarked.pdf
@@ -131,6 +133,19 @@ while (( "$#" )); do
         --keep-files)
             opts[preserve]=true
             shift
+            ;;
+
+        --opacity)
+            if ! [[ $2 =~ ^[0-9]+$ ]]; then
+                fatal_error "not a valid integer: $2"
+            fi
+
+            if [[ $2 -lt 1 ]] || [[ $2 -gt 100 ]]; then
+                fatal_error "--opacity option requires an integer between 0 and 100"
+            fi
+
+            opts[wm.opacity]=$2
+            shift 2
             ;;
 
         # display help
