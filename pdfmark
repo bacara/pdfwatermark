@@ -59,7 +59,7 @@ function help () {
     #    |< ------------------------ 80-characters string in here ----------------------->|
     echo "Mandatory arguments to long options are mandatory for short options too."
     echo "  -d, --directory DIR       set DIR instead of mktemp generation as working"
-    echo "                              directory"
+    echo "                              directory (implies --keep-files)"
     echo "  -f, --force               do not ask for overwrite confirmation"
     echo "  -k, --keep-files          keep intermediate files instead of deleting them"
     echo "  --help                    display this help and exit"
@@ -100,10 +100,6 @@ function pdfwatermark () {
     convert ${FILEPATH_NE}*-watermarked.png ${FILEPATH_NE}-watermarked.pdf
 
     cp ${FILEPATH_NE}-watermarked.pdf ${OUT_FN}
-
-    if ! ${opts[preserve]}; then
-        rm ${FILEPATH_NE}*
-    fi
 }
 
 #
@@ -121,6 +117,7 @@ while (( "$#" )); do
                 fatal_error "no such directory: $2"
             fi
             opts[workdir]="$2"
+            opts[preserve]=true
             shift 2
             ;;
 
@@ -216,3 +213,8 @@ fi
 for i in ${!infiles[*]}; do
     pdfwatermark "${opts[wmfile]}" "${infiles[$i]}" "${outfiles[$i]}"
 done
+
+
+if ! ${opts[preserve]}; then
+    rm -rf ${opts[workdir]}
+fi
