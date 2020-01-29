@@ -1,0 +1,5 @@
+- quiet mode
+- verbose mode
+- underlying tools errors hide/expose mode ?
+- support for multiple files
+- specify pages to watermark and export
