@@ -95,6 +95,10 @@ function pdfwatermark () {
     FN_NE="${DOC_FN%.*}"  # remove extension from filename
     FILEPATH_NE="${opts[workdir]}${FN_NE}.${TMP}" # append filename and tmp to workdir
 
+    # colorize external programs' output foreground color
+    echo -ne "\e[33m"
+
+    # this is where the magic begins
     convert -alpha off -density 300 ${DOC_FN} ${FILEPATH_NE}.png
 
     for page in ${FILEPATH_NE}*.png
@@ -103,6 +107,10 @@ function pdfwatermark () {
     done
 
     convert ${FILEPATH_NE}*-watermarked.png ${FILEPATH_NE}-watermarked.pdf
+    # and this is where the magic ends
+
+    # reset foreground
+    echo -ne "\e[30m"
 
     cp ${FILEPATH_NE}-watermarked.pdf ${OUT_FN}
 }
