@@ -28,6 +28,7 @@ opts[workdir]=""     # working directory
 opts[preserve]=false # preserve intermediate files
 opts[force]=false    # force overwrite
 opts[wm.opacity]=10  # default watermark opacity
+opts[verbose]=false  # verbose mode
 
 # input/output files arrays
 infiles=()
@@ -67,6 +68,7 @@ function help () {
     echo "  -f, --force               do not ask for overwrite confirmation"
     echo "  -k, --keep-files          keep intermediate files instead of deleting them"
     echo "      --opacity N           set watermark inclusion opacity to N (0-100)"
+    echo "  -vn --verbose             be verbose"
     echo "  --help                    display this help and exit"
     #    |< ------------------------ 80-characters string in here ----------------------->|
     echo ""
@@ -99,18 +101,30 @@ function pdfwatermark () {
     echo -ne "\e[33m"
 
     # this is where the magic begins
+    if ${opts[verbose]}; then
+        echo -e "\e[39msplitting ${DOC_FN} into images...\e[33m"
+    fi
+
     convert -alpha off -density 300 ${DOC_FN} ${FILEPATH_NE}.png
 
     for page in ${FILEPATH_NE}*.png
     do
+        if ${opts[verbose]}; then
+            echo -e "\e[39mbuilding watermarked images...\e[33m"
+        fi
+
         composite -watermark ${opts[wm.opacity]} -gravity center ${WM_FN} ${page} ${page%.*}-watermarked.png
     done
+
+    if ${opts[verbose]}; then
+        echo -e "\e[39mbuilding final pdf...\e[33m"
+    fi
 
     convert ${FILEPATH_NE}*-watermarked.png ${FILEPATH_NE}-watermarked.pdf
     # and this is where the magic ends
 
     # reset foreground
-    echo -ne "\e[30m"
+    echo -ne "\e[39m"
 
     cp ${FILEPATH_NE}-watermarked.pdf ${OUT_FN}
 }
@@ -145,6 +159,7 @@ function parse_options () {
                 shift
                 ;;
 
+            # watermarking opacity
             --opacity)
                 if ! [[ $2 =~ ^[0-9]+$ ]]; then
                     fatal_error "not a valid integer: $2"
@@ -156,6 +171,12 @@ function parse_options () {
 
                 opts[wm.opacity]=$2
                 shift 2
+                ;;
+
+            # verbose mode
+            -v|--verbose)
+                opts[verbose]=true
+                shift
                 ;;
 
             # display help
