@@ -27,7 +27,7 @@ opts[wmfile]=""      # watermark file
 opts[workdir]=""     # working directory
 opts[preserve]=false # preserve intermediate files
 opts[force]=false    # force overwrite
-opts[wm.opacity]=30  # default watermark opacity
+opts[wm.opacity]=10  # default watermark opacity
 
 # input/output files arrays
 infiles=()
@@ -42,6 +42,9 @@ BASENAME="$(basename $0)"
 
 function debug () {
     echo "$@"
+    set +x
+    $@
+    set -x
 }
 
 function fatal_error () {
@@ -108,128 +111,142 @@ function pdfwatermark () {
 # main routine
 #
 
-__PARAMS=""
+function parse_options () {
+    while (( "$#" )); do
+        case "$1" in
+            # working directory
+            -d|--directory)
+                # check existence
+                if [[ ! -d "$2" ]]; then
+                    fatal_error "no such directory: $2"
+                fi
+                opts[workdir]="$2"
+                opts[preserve]=true
+                shift 2
+                ;;
 
-while (( "$#" )); do
-    case "$1" in
-        # working directory
-        -d|--directory)
-            # check existence
-            if [[ ! -d "$2" ]]; then
-                fatal_error "no such directory: $2"
-            fi
-            opts[workdir]="$2"
-            opts[preserve]=true
-            shift 2
-            ;;
+            # force overwrite
+            -f|--force)
+                opts[force]=true
+                shift
+                ;;
 
-        # force overwrite
-        -f|--force)
-            opts[force]=true
-            shift
-            ;;
+            # preserve intermediary files
+            --keep-files)
+                opts[preserve]=true
+                shift
+                ;;
 
-        # preserve intermediary files
-        --keep-files)
-            opts[preserve]=true
-            shift
-            ;;
+            --opacity)
+                if ! [[ $2 =~ ^[0-9]+$ ]]; then
+                    fatal_error "not a valid integer: $2"
+                fi
 
-        --opacity)
-            if ! [[ $2 =~ ^[0-9]+$ ]]; then
-                fatal_error "not a valid integer: $2"
-            fi
+                if [[ $2 -lt 1 ]] || [[ $2 -gt 100 ]]; then
+                    fatal_error "--opacity option requires an integer between 0 and 100"
+                fi
 
-            if [[ $2 -lt 1 ]] || [[ $2 -gt 100 ]]; then
-                fatal_error "--opacity option requires an integer between 0 and 100"
-            fi
+                opts[wm.opacity]=$2
+                shift 2
+                ;;
 
-            opts[wm.opacity]=$2
-            shift 2
-            ;;
+            # display help
+            --help)
+                help
+                exit 0
+                ;;
 
-        # display help
-        --help)
-            help
-            exit 0
-            ;;
+            # unknown option
+            -*|--*)
+                error "unknown option $1" >&2
+                usage
+                exit 1
+                ;;
 
-        # unknown option
-        -*|--*)
-            error "unknown option $1" >&2
-            usage
-            exit 1
-            ;;
+            # preserve positional arguments
+            *)
+                __PARAMS="$__PARAMS $1"
+                shift
+                ;;
+        esac
+    done
+}
 
-        # preserve positional arguments
-        *)
-            __PARAMS="$__PARAMS $1"
-            shift
-            ;;
-    esac
-done
+function parse_args () {
+    # check we have watermark and at least one document
+    if [[ $# -lt 2 ]]; then
+        error "not enough arguments"
+        usage
+        exit 1
+    fi
 
-# set positional arguments at proper place
-eval set -- "$__PARAMS"
-
-# check we have watermark and at least one document
-if [[ $# -lt 2 ]]; then
-    error "not enough arguments"
-    usage
-    exit 1
-fi
-
-# check if watermark exists
-if [[ ! -f "$1" ]]; then
-    fatal_error "no such file: $1"
-else
-    opts[wmfile]="$1"
-    shift
-fi
-
-# retrieve input files
-while (( $# )); do
+    # check if watermark exists
     if [[ ! -f "$1" ]]; then
         fatal_error "no such file: $1"
     else
-        infile="$1"
+        opts[wmfile]="$1"
+        shift
     fi
 
-    # build output filename
-    base="$(basename $1)"
-    outfile="${base%.*}-watermarked.${1##*.}"
+    # retrieve input files
+    while (( $# )); do
+        if [[ ! -f "$1" ]]; then
+            fatal_error "no such file: $1"
+        else
+            infile="$1"
+        fi
 
-    # check if output file exists
-    if ! ${opts[force]} && [[ -f "${outfile}" ]]; then
-        read -n 1 -p "${outfile} already exists, overwrite? [y/N] " answer
-        echo # acknowledge answer
-        case $answer in
-            [Yy]) ;;
-            *)
-                exit 1
-                ;;
-        esac
+        # build output filename
+        base="$(basename $1)"
+        outfile="${base%.*}-watermarked.${1##*.}"
+
+        # check if output file exists
+        if ! ${opts[force]} && [[ -f "${outfile}" ]]; then
+            read -n 1 -p "${outfile} already exists, overwrite? [y/N] " answer
+            echo # acknowledge answer
+            case $answer in
+                [Yy]) ;;
+                *)
+                    exit 1
+                    ;;
+            esac
+        fi
+
+        infiles+=("$infile")
+        outfiles+=("$outfile")
+        shift
+    done
+
+    # create temp directory if no working directory provided
+    if [[ -z "${opts[workdir]}" ]]; then
+        opts[workdir]="$(mktemp -p /tmp -d pdfmark.XXXXX)"
     fi
 
-    infiles+=("$infile")
-    outfiles+=("$outfile")
-    shift
-done
+    # add trailing slash to working directory if needed
+    [[ "${opts[workdir]}" != */ ]] && opts[workdir]="${opts[workdir]}/"
+}
 
-# create temp directory if no working directory provided
-if [[ -z "${opts[workdir]}" ]]; then
-    opts[workdir]="$(mktemp -p /tmp -d pdfmark.XXXXX)"
-fi
+function cleanup () {
+    # remove working directory
+    if ! ${opts[preserve]}; then
+        rm -rf ${opts[workdir]}
+    fi
+}
 
-# add trailing slash to working directory if needed
-[[ "${opts[workdir]}" != */ ]] && opts[workdir]="${opts[workdir]}/"
+function main () {
+    __PARAMS=""
 
-# do your job
-for i in ${!infiles[*]}; do
-    pdfwatermark "${opts[wmfile]}" "${infiles[$i]}" "${outfiles[$i]}"
-done
+    parse_options $@
+    eval set -- "$__PARAMS"
+    parse_args $@
 
+    # do your job
+    for i in ${!infiles[*]}; do
+        pdfwatermark "${opts[wmfile]}" "${infiles[$i]}" "${outfiles[$i]}"
+    done
 
-if ! ${opts[preserve]}; then
-    rm -rf ${opts[workdir]}
-fi
+    cleanup
+}
+
+# main routine
+main $@
