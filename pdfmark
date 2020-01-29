@@ -107,12 +107,12 @@ function pdfwatermark () {
 
     convert -alpha off -density 300 ${DOC_FN} ${FILEPATH_NE}.png
 
+    if ${opts[verbose]}; then
+        echo -e "\e[39mbuilding watermarked images...\e[33m"
+    fi
+
     for page in ${FILEPATH_NE}*.png
     do
-        if ${opts[verbose]}; then
-            echo -e "\e[39mbuilding watermarked images...\e[33m"
-        fi
-
         composite -watermark ${opts[wm.opacity]} -gravity center ${WM_FN} ${page} ${page%.*}-watermarked.png
     done
 
@@ -120,13 +120,11 @@ function pdfwatermark () {
         echo -e "\e[39mbuilding final pdf...\e[33m"
     fi
 
-    convert ${FILEPATH_NE}*-watermarked.png ${FILEPATH_NE}-watermarked.pdf
+    convert ${FILEPATH_NE}*-watermarked.png ${OUT_FN}
     # and this is where the magic ends
 
     # reset foreground
     echo -ne "\e[39m"
-
-    cp ${FILEPATH_NE}-watermarked.pdf ${OUT_FN}
 }
 
 #
@@ -221,13 +219,15 @@ function parse_args () {
     while (( $# )); do
         if [[ ! -f "$1" ]]; then
             fatal_error "no such file: $1"
+        elif ! [[ ${1##\.} =~ pdf ]]; then
+            fatal_error "not a pdf: $1"
         else
             infile="$1"
         fi
 
         # build output filename
         base="$(basename $1)"
-        outfile="${base%.*}-watermarked.${1##*.}"
+        outfile="${base%.*}-watermarked.pdf"
 
         # check if output file exists
         if ! ${opts[force]} && [[ -f "${outfile}" ]]; then
