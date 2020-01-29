@@ -53,8 +53,17 @@ function help () {
     echo "Usage: ${BASENAME} [OPTION]... <WATERMARK> <FILE>"
     echo "Watermark your PDF documents"
     echo ""
-    echo "Options:"
-    echo "    --help         Display this help and exit"
+    #    |< ------------------------ 80-characters string in here ----------------------->|
+    echo "Mandatory arguments to long options are mandatory for short options too."
+    echo "  -d, --directory DIR       set DIR instead of mktemp generation as working"
+    echo "                              directory"
+    echo "  -k, --keep-files          keep intermediate files instead of deleting them"
+    echo "  -o, --outfile FILE        use FILE as output filename"
+    echo ""
+    echo "  --help               Display this help and exit"
+    #    |< ------------------------ 80-characters string in here ----------------------->|
+    echo ""
+    echo "Full documentation <https://www.github.com/bacara/pdfmark>"
 }
 
 function usage () {
