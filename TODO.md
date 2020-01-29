@@ -1,5 +1,3 @@
-- quiet mode
-- verbose mode
-- underlying tools errors hide/expose mode ?
-- support for multiple files
+- quiet mode?
 - specify pages to watermark and export
+- set output pdf metadata
