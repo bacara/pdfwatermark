@@ -73,7 +73,7 @@ function pdfwatermark () {
     WM_FN="$1"
     DOC_FN="$2"
 
-    TMP="$(mktemp XXXXX)"
+    TMP="$(mktemp -u XXXXX)"
     FN_NE="${DOC_FN%.*}"  # remove extension from filename
     FILEPATH_NE="${opts[workdir]}${FN_NE}.${TMP}" # append filename and tmp to workdir
 
