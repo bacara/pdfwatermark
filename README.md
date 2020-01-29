@@ -1,5 +1,12 @@
-# pdfmark
+# pdfwatermark
 Watermark PDF documents
+
+pdfwatermark is a simple, yet effective tool to watermark your personal
+documents before handing them to some people/corporation.
+
+While it might be sufficient for most people at most time in life, the increased
+security provided by this software is absolutely not bullet-proof, nor even
+guaranted. Use at your own risks.
 
 ## Usage
 

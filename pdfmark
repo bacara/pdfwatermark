@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# pdfmark - Watermark PDF documents - https://www.github.com/bacara/pdfmark
+# pdfwatermark - Watermark PDF documents - https://www.github.com/bacara/pdfwatermark
 # Copyright (c) [2020] Christophe Bacara
 #
 # This program is free software: you can redistribute it and/or modify
@@ -72,7 +72,7 @@ function help () {
     echo "  --help                    display this help and exit"
     #    |< ------------------------ 80-characters string in here ----------------------->|
     echo ""
-    echo "Full documentation <https://www.github.com/bacara/pdfmark>"
+    echo "Full documentation <https://www.github.com/bacara/pdfwatermark>"
 }
 
 function usage () {
@@ -248,7 +248,7 @@ function parse_args () {
 
     # create temp directory if no working directory provided
     if [[ -z "${opts[workdir]}" ]]; then
-        opts[workdir]="$(mktemp -p /tmp -d pdfmark.XXXXX)"
+        opts[workdir]="$(mktemp -p /tmp -d pdfwatermark.XXXXX)"
     fi
 
     # add trailing slash to working directory if needed
