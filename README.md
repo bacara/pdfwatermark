@@ -11,15 +11,19 @@ guaranted. Use at your own risks.
 ## Usage
 
 ```
-Usage: pdfmark [OPTION]... <WATERMARK> <FILE>...
+Usage: pdfwatermark [OPTION]... <WATERMARK> <FILE>...
 Watermark your PDF documents
 
 Mandatory arguments to long options are mandatory for short options too.
   -d, --directory DIR       set DIR instead of mktemp generation as working
-                              directory
+                              directory (implies --keep-files)
   -f, --force               do not ask for overwrite confirmation
   -k, --keep-files          keep intermediate files instead of deleting them
+      --opacity N           set watermark inclusion opacity to N (0-100)
+  -vn --verbose             be verbose
   --help                    display this help and exit
+
+Full documentation <https://www.github.com/bacara/pdfwatermark>
 ```
 
 ## How to create your watermark
