@@ -1,0 +1,200 @@
+#!/bin/bash
+#
+# pdfmark - Watermark PDF documents - https://www.github.com/bacara/pdfmark
+# Copyright (c) [2020] Christophe Bacara
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+
+#
+# global variables
+#
+
+# options array
+declare -A opts
+opts[outfile]=""     # output file
+opts[infile]=""      # input file
+opts[wmfile]=""      # watermark file
+opts[workdir]=""     # working directory
+opts[preserve]=false # preserve intermediate files
+
+# misc
+BASENAME="$(basename $0)"
+
+#
+# utilities
+#
+
+function debug () {
+    echo "$@"
+}
+
+function fatal_error () {
+    echo -e "$BASENAME: $1" 1>&2
+    exit 1
+}
+
+function error () {
+    echo -e "$BASENAME: $1" 1>&2
+}
+
+function help () {
+    echo "Usage: ${BASENAME} [OPTION]... <WATERMARK> <FILE>"
+    echo "Watermark your PDF documents"
+    echo ""
+    echo "Options:"
+    echo "    --help         Display this help and exit"
+}
+
+function usage () {
+    echo "Usage: ${BASENAME} [OPTION]... <WATERMARK> <FILE>"
+    echo "Use --help to display more help"
+}
+
+#
+# functions
+#
+
+function pdfwatermark () {
+    # $1: watermark filename
+    # $2: document filename
+
+    WM_FN="$1"
+    DOC_FN="$2"
+
+    TMP="$(mktemp XXXXX)"
+    FN_NE="${DOC_FN%.*}"  # remove extension from filename
+    FILEPATH_NE="${opts[workdir]}${FN_NE}.${TMP}" # append filename and tmp to workdir
+
+    convert -alpha off -density 300 ${DOC_FN} ${FILEPATH_NE}.png
+
+    for page in ${FILEPATH_NE}*.png
+    do
+        composite -watermark 30 -gravity center ${WM_FN} ${page} ${page%.*}-watermarked.png
+    done
+
+    convert ${FILEPATH_NE}*-watermarked.png ${FILEPATH_NE}-watermarked.pdf
+
+    cp ${FILEPATH_NE}-watermarked.pdf ${opts[outfile]}
+
+    if ! ${opts[preserve]}; then
+        rm ${FILEPATH_NE}*
+    fi
+}
+
+#
+# main routine
+#
+
+__PARAMS=""
+
+while (( "$#" )); do
+    case "$1" in
+        # output file
+        -o|--outfile)
+            opts[outfile]="$2"
+            shift 2
+            ;;
+
+        # working directory
+        -d|--directory)
+            # check existence
+            if [[ ! -d "$2" ]]; then
+                fatal_error "no such directory: $2"
+            fi
+            opts[workdir]="$2"
+            shift 2
+            ;;
+
+        # preserve intermediary files
+        --keep-files)
+            opts[preserve]=true
+            shift
+            ;;
+
+        # display help
+        --help)
+            help
+            exit 0
+            ;;
+
+        # unknown option
+        -*|--*)
+            error "unknown option $1" >&2
+            usage
+            exit 1
+            ;;
+
+        # preserve positional arguments
+        *)
+            __PARAMS="$__PARAMS $1"
+            shift
+            ;;
+    esac
+done
+
+# set positional arguments at proper place
+eval set -- "$__PARAMS"
+
+# check we have watermark and at least one document
+if [[ $# -lt 2 ]]; then
+    error "not enough arguments"
+    usage
+    exit 1
+fi
+
+# check if watermark exists
+if [[ ! -f "$1" ]]; then
+    fatal_error "no such file: $1"
+else
+    opts[wmfile]="$1"
+    shift
+fi
+
+# check if input file exists
+if [[ ! -f "$1" ]]; then
+    fatal_error "no such file: $1"
+else
+    opts[infile]="$1"
+    shift
+fi
+
+# build output filename if needed
+if [[ -z "${opts[outfile]}" ]]; then
+    base="$(basename ${opts[infile]})"
+    opts[outfile]="${base%.*}-watermarked.${opts[infile]##*.}"
+fi
+
+# check if output file exists
+if [[ -f "${opts[outfile]}" ]]; then
+    read -n 1 -p "output file already exists, overwrite? [y/N] " answer
+    echo # acknowledge answer
+    case $answer in
+        [Yy]) ;;
+        *)
+            exit 1
+            ;;
+    esac
+fi
+
+# create temp directory if no working directory provided
+if [[ -z "${opts[workdir]}" ]]; then
+    opts[workdir]="$(mktemp -p /tmp -d pdfmark.XXXXX)"
+fi
+
+# add trailing slash to working directory if needed
+[[ "${opts[workdir]}" != */ ]] && opts[workdir]="${opts[workdir]}/"
+
+# do your job
+pdfwatermark ${opts[wmfile]} ${opts[infile]}
