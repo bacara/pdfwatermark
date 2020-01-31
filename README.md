@@ -15,12 +15,13 @@ Usage: pdfwatermark [OPTION]... <WATERMARK> <FILE>...
 Watermark your PDF documents
 
 Mandatory arguments to long options are mandatory for short options too.
-  -d, --directory DIR       set DIR instead of mktemp generation as working
-                              directory (implies --keep-files)
+  -d, --directory DIR       set DIR instead of /tmp/pdfwatermark.<mktemp> as
+                              working directory (implies --keep-files)
+  -D, --force-dir DIR       as -d, but force creation of DIR if is doesn't exist
   -f, --force               do not ask for overwrite confirmation
   -k, --keep-files          keep intermediate files instead of deleting them
       --opacity N           set watermark inclusion opacity to N (0-100)
-  -vn --verbose             be verbose
+  -v, --verbose             be verbose
   --help                    display this help and exit
 
 Full documentation <https://www.github.com/bacara/pdfwatermark>
@@ -34,7 +35,7 @@ At startup, choose File > New. In the popup window, choose the A4 template. Enab
 advanced options, then set "Fill Background" to "Transparency". Create the new file.
 
 Now, you can just use the text tool to make your watermark. Use a dark color, if
-not black for your text and use this tool --opacity option to fine tune
+not black for your text and use pdfwatermark --opacity option to fine tune
 afterwards. Remember this is an A4 sized image: you might want to increase
 default text size. Once you're done, export the file to PNG.
 

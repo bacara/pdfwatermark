@@ -63,12 +63,13 @@ function help () {
     echo ""
     #    |< ------------------------ 80-characters string in here ----------------------->|
     echo "Mandatory arguments to long options are mandatory for short options too."
-    echo "  -d, --directory DIR       set DIR instead of mktemp generation as working"
-    echo "                              directory (implies --keep-files)"
+    echo "  -d, --directory DIR       set DIR instead of /tmp/pdfwatermark.<mktemp> as"
+    echo "                              working directory (implies --keep-files)"
+    echo "  -D, --force-dir DIR       as -d, but force creation of DIR if is doesn't exist"
     echo "  -f, --force               do not ask for overwrite confirmation"
     echo "  -k, --keep-files          keep intermediate files instead of deleting them"
     echo "      --opacity N           set watermark inclusion opacity to N (0-100)"
-    echo "  -vn --verbose             be verbose"
+    echo "  -v, --verbose             be verbose"
     echo "  --help                    display this help and exit"
     #    |< ------------------------ 80-characters string in here ----------------------->|
     echo ""
@@ -139,6 +140,17 @@ function parse_options () {
                 # check existence
                 if [[ ! -d "$2" ]]; then
                     fatal_error "no such directory: $2"
+                fi
+                opts[workdir]="$2"
+                opts[preserve]=true
+                shift 2
+                ;;
+
+            # force working directory
+            -D|--create-directory)
+                # create if absent
+                if [[ ! -d "$2" ]]; then
+                    mkdir "$2" || fatal_error "couldn't create directory: $2"
                 fi
                 opts[workdir]="$2"
                 opts[preserve]=true
