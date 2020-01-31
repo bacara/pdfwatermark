@@ -28,4 +28,24 @@ Full documentation <https://www.github.com/bacara/pdfwatermark>
 
 ## How to create your watermark
 
-TODO
+### Using GIMP
+
+At startup, choose File > New. In the popup window, choose the A4 template. Enable
+advanced options, then set "Fill Background" to "Transparency". Create the new file.
+
+Now, you can just use the text tool to make your watermark. Use a dark color, if
+not black for your text and use this tool --opacity option to fine tune
+afterwards. Remember this is an A4 sized image: you might want to increase
+default text size. Once you're done, export the file to PNG.
+
+## Troubleshooting and known issues
+
+### My watermark is not visible in the document
+
+Using this tool, one missue that might occur is that you don't see the watermark
+in the file. This happens when the original PDF is not having the same ppi as
+the watermark (GIMP default is 300 ppi). If this is your case, try using a
+smaller part of your watermark template to make it fit inside your document. The
+author is aware this is a crappy workaround, but do not have any better solution
+at the moment. If you think you do have an idea or some chunks of code to
+enhance this solution, please contribute.
