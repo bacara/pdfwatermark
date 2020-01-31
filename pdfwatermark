@@ -23,12 +23,12 @@
 
 # options array
 declare -A opts
-opts[wmfile]=""      # watermark file
-opts[workdir]=""     # working directory
-opts[preserve]=false # preserve intermediate files
-opts[force]=false    # force overwrite
-opts[wm.opacity]=10  # default watermark opacity
-opts[verbose]=false  # verbose mode
+opts[wd.path]=""             # working directory
+opts[wm.fn]=""               # watermark filename
+opts[wm.opacity]=10          # default watermark opacity
+opts[fl.preserve]=false      # preserve intermediate files
+opts[fl.force]=false         # force overwrite
+opts[fl.verbose]=false       # verbose mode
 
 # input/output files arrays
 infiles=()
@@ -49,12 +49,12 @@ function debug () {
 }
 
 function fatal_error () {
-    echo -e "$BASENAME: $1" 1>&2
+    echo -e "${BASENAME}: $1" 1>&2
     exit 1
 }
 
 function error () {
-    echo -e "$BASENAME: $1" 1>&2
+    echo -e "${BASENAME}: $1" 1>&2
 }
 
 function help () {
@@ -96,32 +96,32 @@ function pdfwatermark () {
 
     TMP="$(mktemp -u XXXXX)"
     FN_NE="${DOC_FN%.*}"  # remove extension from filename
-    FILEPATH_NE="${opts[workdir]}${FN_NE}.${TMP}" # append filename and tmp to workdir
+    FILEPATH_NE="${opts[wd.path]}${FN_NE}.${TMP}" # append filename and tmp to workdir
 
     # colorize external programs' output foreground color
     echo -ne "\e[33m"
 
     # this is where the magic begins
-    if ${opts[verbose]}; then
+    if ${opts[fl.verbose]}; then
         echo -e "\e[39msplitting ${DOC_FN} into images...\e[33m"
     fi
 
-    convert -alpha off -density 300 ${DOC_FN} ${FILEPATH_NE}.png
+    convert -alpha off -density 300 "${DOC_FN}" "${FILEPATH_NE}.png"
 
-    if ${opts[verbose]}; then
+    if ${opts[fl.verbose]}; then
         echo -e "\e[39mbuilding watermarked images...\e[33m"
     fi
 
     for page in ${FILEPATH_NE}*.png
     do
-        composite -watermark ${opts[wm.opacity]} -gravity center ${WM_FN} ${page} ${page%.*}-watermarked.png
+        composite -watermark ${opts[wm.opacity]} -gravity center "${WM_FN}" "${page}" "${page%.*}-watermarked.png"
     done
 
-    if ${opts[verbose]}; then
+    if ${opts[fl.verbose]}; then
         echo -e "\e[39mbuilding final pdf...\e[33m"
     fi
 
-    convert ${FILEPATH_NE}*-watermarked.png ${OUT_FN}
+    convert "${FILEPATH_NE}*-watermarked.png" "${OUT_FN}"
     # and this is where the magic ends
 
     # reset foreground
@@ -133,7 +133,7 @@ function pdfwatermark () {
 #
 
 function parse_options () {
-    while (( "$#" )); do
+    while (( $# )); do
         case "$1" in
             # working directory
             -d|--directory)
@@ -141,8 +141,8 @@ function parse_options () {
                 if [[ ! -d "$2" ]]; then
                     fatal_error "no such directory: $2"
                 fi
-                opts[workdir]="$2"
-                opts[preserve]=true
+                opts[wd.path]="$2"
+                opts[fl.preserve]=true
                 shift 2
                 ;;
 
@@ -152,20 +152,20 @@ function parse_options () {
                 if [[ ! -d "$2" ]]; then
                     mkdir "$2" || fatal_error "couldn't create directory: $2"
                 fi
-                opts[workdir]="$2"
-                opts[preserve]=true
+                opts[wd.path]="$2"
+                opts[fl.preserve]=true
                 shift 2
                 ;;
 
             # force overwrite
             -f|--force)
-                opts[force]=true
+                opts[fl.force]=true
                 shift
                 ;;
 
             # preserve intermediary files
-            --keep-files)
-                opts[preserve]=true
+            -k|--keep-files)
+                opts[fl.preserve]=true
                 shift
                 ;;
 
@@ -185,7 +185,7 @@ function parse_options () {
 
             # verbose mode
             -v|--verbose)
-                opts[verbose]=true
+                opts[fl.verbose]=true
                 shift
                 ;;
 
@@ -223,7 +223,7 @@ function parse_args () {
     if [[ ! -f "$1" ]]; then
         fatal_error "no such file: $1"
     else
-        opts[wmfile]="$1"
+        opts[wm.fn]="$1"
         shift
     fi
 
@@ -242,7 +242,7 @@ function parse_args () {
         outfile="${base%.*}-watermarked.pdf"
 
         # check if output file exists
-        if ! ${opts[force]} && [[ -f "${outfile}" ]]; then
+        if ! ${opts[fl.force]} && [[ -f "${outfile}" ]]; then
             read -n 1 -p "${outfile} already exists, overwrite? [y/N] " answer
             echo # acknowledge answer
             case $answer in
@@ -259,18 +259,18 @@ function parse_args () {
     done
 
     # create temp directory if no working directory provided
-    if [[ -z "${opts[workdir]}" ]]; then
-        opts[workdir]="$(mktemp -p /tmp -d pdfwatermark.XXXXX)"
+    if [[ -z "${opts[wd.path]}" ]]; then
+        opts[wd.path]="$(mktemp -p /tmp -d pdfwatermark.XXXXX)"
     fi
 
     # add trailing slash to working directory if needed
-    [[ "${opts[workdir]}" != */ ]] && opts[workdir]="${opts[workdir]}/"
+    [[ "${opts[wd.path]}" != */ ]] && opts[wd.path]="${opts[wd.path]}/"
 }
 
 function cleanup () {
     # remove working directory
-    if ! ${opts[preserve]}; then
-        rm -rf ${opts[workdir]}
+    if ! ${opts[fl.preserve]}; then
+        rm -rf ${opts[wd.path]}
     fi
 }
 
@@ -283,7 +283,7 @@ function main () {
 
     # do your job
     for i in ${!infiles[*]}; do
-        pdfwatermark "${opts[wmfile]}" "${infiles[$i]}" "${outfiles[$i]}"
+        pdfwatermark "${opts[wm.fn]}" "${infiles[$i]}" "${outfiles[$i]}"
     done
 
     cleanup
